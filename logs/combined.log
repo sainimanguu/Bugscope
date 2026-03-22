@@ -1,0 +1,6 @@
+{"level":"info","message":"Server running on port 5000","service":"bugscope-backend","timestamp":"2026-03-22 13:30:34"}
+{"level":"info","message":"Server running on port 5000","service":"bugscope-backend","timestamp":"2026-03-22 13:30:36"}
+{"level":"info","message":"Server running on port 5000","service":"bugscope-backend","timestamp":"2026-03-22 13:31:02"}
+{"level":"info","message":"Server running on port 5000","service":"bugscope-backend","timestamp":"2026-03-22 13:31:25"}
+{"level":"info","message":"Server running on port 5000","service":"bugscope-backend","timestamp":"2026-03-22 13:31:56"}
+{"environment":"production","errorId":"69bfa2699bc2d0ae908e0b3a","level":"info","message":"Error logged (new)","projectId":"project1","service":"bugscope-backend","severity":"high","timestamp":"2026-03-22 13:33:53"}

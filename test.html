@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>BugScope Test</title>
+</head>
+<body>
+
+<h2>BugScope Testing Page</h2>
+
+<script src="sdk.js"></script>
+
+<script>
+  // Initialize SDK
+  initBugScope({
+    projectId: "app1",
+    environment: "development"
+  });
+
+  // Trigger error
+  undefined.name;
+
+  // Trigger async error
+  Promise.reject("Test async error");
+</script>
+
+</body>
+</html>

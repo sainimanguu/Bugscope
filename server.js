@@ -1,0 +1,68 @@
+const express = require("express");
+const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+require("dotenv").config();
+const connectDB = require("./config/db");
+const errorRoutes = require("./routes/errorRoutes");
+const logger = require("./config/logger");
+
+const app = express();
+
+connectDB();
+
+app.use(express.json());
+
+// CORS Configuration
+const allowedOrigins = [
+  "http://localhost:3000", 
+  "http://localhost:3001",
+  process.env.FRONTEND_URL,
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
+
+// RATE LIMITING
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: "Too many requests from this IP, please try again after 15 minutes",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const errorLogLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 30,
+  message: "Too many error logs from this IP, please try again after 1 minute",
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use(generalLimiter);
+app.use("/api/errors/log", errorLogLimiter);
+
+// ROUTES
+app.use("/api/errors", errorRoutes);
+
+// Health check endpoint
+app.get("/health", (req, res) => {
+  logger.info("Health check requested");
+  res.json({ status: "OK", timestamp: new Date() });
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  logger.error("Unhandled error", { error: err.message, stack: err.stack });
+  res.status(500).json({ success: false, error: "Internal server error" });
+});
+
+// Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  logger.info(`Server running on port ${PORT}`);
+});
