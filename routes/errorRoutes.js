@@ -2,6 +2,8 @@ const express = require("express");
 const router = express.Router();
 const Error = require("../models/Error");
 const logger = require("../config/logger");
+const crypto = require("crypto");
+const errorGrouper = require("../utils/errorGrouping");
 
 const VALID_SEVERITIES = ["low", "medium", "high"];
 const VALID_ENVIRONMENTS = ["development", "staging", "production"];
@@ -57,10 +59,14 @@ router.post("/log", async (req, res) => {
     const cleanStack = stack.trim();
     const cleanProjectId = projectId.trim();
 
+    // Generate grouping key
+    const groupingKey = errorGrouper.generateGroupingKey(cleanMessage, cleanStack);
+    const errorPattern = errorGrouper.getErrorPattern(cleanMessage);
+
+    // Search by groupingKey instead of exact message
     const existingError = await Error.findOne({
-      message: cleanMessage,
-      stack: cleanStack,
       projectId: cleanProjectId,
+      groupingKey,
       severity: validatedSeverity,
       environment: validatedEnvironment,
     });
@@ -68,6 +74,27 @@ router.post("/log", async (req, res) => {
     if (existingError) {
       existingError.count += 1;
       existingError.lastSeen = new Date();
+
+      // Track original messages that got grouped
+      if (cleanMessage !== existingError.message) {
+        const messageHash = crypto
+          .createHash("md5")
+          .update(cleanMessage)
+          .digest("hex");
+
+        const alreadyTracked = existingError.mergedWith.some(
+          (m) => m.originalMessage === cleanMessage
+        );
+
+        if (!alreadyTracked) {
+          existingError.mergedWith.push({
+            messageHash,
+            originalMessage: cleanMessage,
+            mergedAt: new Date(),
+          });
+        }
+      }
+
       await existingError.save();
 
       logger.info("Error logged (incremented)", {
@@ -76,6 +103,7 @@ router.post("/log", async (req, res) => {
         severity: validatedSeverity,
         environment: validatedEnvironment,
         count: existingError.count,
+        groupingKey,
       });
 
       return res.status(200).json({
@@ -85,15 +113,21 @@ router.post("/log", async (req, res) => {
         count: existingError.count,
         severity: existingError.severity,
         environment: existingError.environment,
+        groupingKey,
+        errorPattern,
       });
     }
 
+    // Create new error with grouping info
     const newError = new Error({
       message: cleanMessage,
       stack: cleanStack,
       projectId: cleanProjectId,
       severity: validatedSeverity,
       environment: validatedEnvironment,
+      groupingKey,
+      errorPattern,
+      mergedWith: [],
     });
 
     await newError.save();
@@ -103,6 +137,7 @@ router.post("/log", async (req, res) => {
       projectId: cleanProjectId,
       severity: validatedSeverity,
       environment: validatedEnvironment,
+      groupingKey,
     });
 
     res.status(201).json({
@@ -112,6 +147,8 @@ router.post("/log", async (req, res) => {
       severity: newError.severity,
       environment: newError.environment,
       count: newError.count,
+      groupingKey,
+      errorPattern,
     });
   } catch (error) {
     logger.error("Error logging failed", {
@@ -164,6 +201,21 @@ router.get("/", async (req, res) => {
 
     const total = await Error.countDocuments(query);
 
+    // Enhance response with grouping info
+    const errorsWithGrouping = errors.map((err) => ({
+      _id: err._id,
+      message: err.message,
+      errorPattern: err.errorPattern,
+      groupingKey: err.groupingKey,
+      count: err.count,
+      severity: err.severity,
+      environment: err.environment,
+      firstSeen: err.firstSeen,
+      lastSeen: err.lastSeen,
+      mergedCount: err.mergedWith?.length || 0,
+      mergedExamples: err.mergedWith?.slice(0, 3).map((m) => m.originalMessage),
+    }));
+
     logger.info("Errors fetched", {
       projectId,
       severity: query.severity || "all",
@@ -174,7 +226,7 @@ router.get("/", async (req, res) => {
 
     res.json({
       success: true,
-      data: errors,
+      data: errorsWithGrouping,
       pagination: {
         total,
         limit: limitNum,

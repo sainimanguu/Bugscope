@@ -49,6 +49,21 @@ const errorSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    groupingKey: {
+      type: String,
+      required: true,
+      index: true,
+    },
+    errorPattern: {
+      type: String,
+    },
+    mergedWith: [
+      {
+        messageHash: String,
+        originalMessage: String,
+        mergedAt: Date,
+      },
+    ],
   },
   { timestamps: true }
 );
@@ -66,6 +81,11 @@ errorSchema.index({
   severity: 1,
   environment: 1,
   lastSeen: -1,
+});
+
+errorSchema.index({
+  projectId: 1,
+  groupingKey: 1,
 });
 
 module.exports = mongoose.model("Error", errorSchema);
