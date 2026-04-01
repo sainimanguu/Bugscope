@@ -4,6 +4,11 @@ const rateLimit = require("express-rate-limit");
 require("dotenv").config();
 const connectDB = require("./config/db");
 const errorRoutes = require("./routes/errorRoutes");
+const authRoutes = require("./routes/authRoutes");
+const invitationRoutes = require("./routes/invitationRoutes");
+const priorityRoutes = require("./routes/priorityRoutes");
+const userRoutes = require("./routes/userRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const logger = require("./config/logger");
 
 const app = express();
@@ -14,7 +19,7 @@ app.use(express.json());
 
 // CORS Configuration
 const allowedOrigins = [
-  "http://localhost:3000", 
+  "http://localhost:3000",
   "http://localhost:3001",
   process.env.FRONTEND_URL,
 ];
@@ -48,6 +53,11 @@ app.use("/api/errors/log", errorLogLimiter);
 
 // ROUTES
 app.use("/api/errors", errorRoutes);
+app.use("/api/errors", priorityRoutes);
+app.use("/auth", authRoutes);
+app.use("/api/invitations", invitationRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/admin", adminRoutes);
 
 // Health check endpoint
 app.get("/health", (req, res) => {

@@ -26,6 +26,12 @@ const errorSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    priority: {
+      type: String,
+      enum: ["critical", "urgent", "high", "medium", "low"],
+      default: "medium",
+      index: true,
+    },
     count: {
       type: Number,
       default: 1,
@@ -64,6 +70,19 @@ const errorSchema = new mongoose.Schema(
         mergedAt: Date,
       },
     ],
+    aiExplanation: {
+      type: String,
+    },
+    aiSuggestedFixes: [String],
+    status: {
+      type: String,
+      enum: ["new", "investigating", "resolved", "ignored"],
+      default: "new",
+    },
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
   { timestamps: true }
 );
@@ -86,6 +105,12 @@ errorSchema.index({
 errorSchema.index({
   projectId: 1,
   groupingKey: 1,
+});
+
+errorSchema.index({
+  projectId: 1,
+  priority: 1,
+  lastSeen: -1,
 });
 
 module.exports = mongoose.model("Error", errorSchema);

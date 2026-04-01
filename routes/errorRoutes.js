@@ -4,21 +4,24 @@ const Error = require("../models/Error");
 const logger = require("../config/logger");
 const crypto = require("crypto");
 const errorGrouper = require("../utils/errorGrouping");
+const aiExplainer = require("../utils/aiExplainer");
+const { authMiddleware } = require("../middleware/auth");
+const { logActivity } = require("../middleware/activityLogger");
 
 const VALID_SEVERITIES = ["low", "medium", "high"];
 const VALID_ENVIRONMENTS = ["development", "staging", "production"];
 
 function validateSeverity(severity) {
   if (!severity) return "medium";
-  return VALID_SEVERITIES.includes(severity.toLowerCase()) 
-    ? severity.toLowerCase() 
+  return VALID_SEVERITIES.includes(severity.toLowerCase())
+    ? severity.toLowerCase()
     : "medium";
 }
 
 function validateEnvironment(environment) {
   if (!environment) return "development";
-  return VALID_ENVIRONMENTS.includes(environment.toLowerCase()) 
-    ? environment.toLowerCase() 
+  return VALID_ENVIRONMENTS.includes(environment.toLowerCase())
+    ? environment.toLowerCase()
     : "development";
 }
 
@@ -59,11 +62,9 @@ router.post("/log", async (req, res) => {
     const cleanStack = stack.trim();
     const cleanProjectId = projectId.trim();
 
-    // Generate grouping key
     const groupingKey = errorGrouper.generateGroupingKey(cleanMessage, cleanStack);
     const errorPattern = errorGrouper.getErrorPattern(cleanMessage);
 
-    // Search by groupingKey instead of exact message
     const existingError = await Error.findOne({
       projectId: cleanProjectId,
       groupingKey,
@@ -75,7 +76,6 @@ router.post("/log", async (req, res) => {
       existingError.count += 1;
       existingError.lastSeen = new Date();
 
-      // Track original messages that got grouped
       if (cleanMessage !== existingError.message) {
         const messageHash = crypto
           .createHash("md5")
@@ -118,7 +118,6 @@ router.post("/log", async (req, res) => {
       });
     }
 
-    // Create new error with grouping info
     const newError = new Error({
       message: cleanMessage,
       stack: cleanStack,
@@ -167,10 +166,18 @@ router.post("/log", async (req, res) => {
   }
 });
 
-// GET /api/errors
+// GET /api/errors (with ADVANCED FILTERING)
 router.get("/", async (req, res) => {
   try {
-    const { projectId, severity, environment, limit = 50, skip = 0 } = req.query;
+    const {
+      projectId,
+      severity,
+      environment,
+      priority,
+      status,
+      limit = 50,
+      skip = 0,
+    } = req.query;
 
     if (!projectId) {
       logger.warn("Errors fetch missing projectId");
@@ -180,14 +187,29 @@ router.get("/", async (req, res) => {
       });
     }
 
+    // Build filter with ALL criteria
     const query = { projectId: projectId.trim() };
-    
+
     if (severity) {
       query.severity = validateSeverity(severity);
     }
-    
+
     if (environment) {
       query.environment = validateEnvironment(environment);
+    }
+
+    if (priority) {
+      const validPriorities = ["critical", "urgent", "high", "medium", "low"];
+      if (validPriorities.includes(priority.toLowerCase())) {
+        query.priority = priority.toLowerCase();
+      }
+    }
+
+    if (status) {
+      const validStatuses = ["new", "investigating", "resolved", "ignored"];
+      if (validStatuses.includes(status.toLowerCase())) {
+        query.status = status.toLowerCase();
+      }
     }
 
     const limitNum = Math.min(parseInt(limit) || 50, 100);
@@ -201,7 +223,6 @@ router.get("/", async (req, res) => {
 
     const total = await Error.countDocuments(query);
 
-    // Enhance response with grouping info
     const errorsWithGrouping = errors.map((err) => ({
       _id: err._id,
       message: err.message,
@@ -210,16 +231,20 @@ router.get("/", async (req, res) => {
       count: err.count,
       severity: err.severity,
       environment: err.environment,
+      priority: err.priority,
+      status: err.status,
       firstSeen: err.firstSeen,
       lastSeen: err.lastSeen,
       mergedCount: err.mergedWith?.length || 0,
       mergedExamples: err.mergedWith?.slice(0, 3).map((m) => m.originalMessage),
     }));
 
-    logger.info("Errors fetched", {
+    logger.info("Errors fetched with filters", {
       projectId,
       severity: query.severity || "all",
       environment: query.environment || "all",
+      priority: query.priority || "all",
+      status: query.status || "all",
       returned: errors.length,
       total,
     });
@@ -330,6 +355,54 @@ router.get("/stats/:projectId", async (req, res) => {
       message: error.message,
     });
     res.status(500).json({ success: false, error: "Internal server error" });
+  }
+});
+
+// POST /api/errors/:id/explain
+router.post("/:id/explain", async (req, res) => {
+  try {
+    const error = await Error.findById(req.params.id);
+
+    if (!error) {
+      return res.status(404).json({
+        success: false,
+        error: "Error not found",
+      });
+    }
+
+    const aiResult = await aiExplainer.explainError(error.message, error.stack);
+
+    if (aiResult) {
+      error.aiExplanation = aiResult.explanation;
+      error.aiSuggestedFixes = aiResult.suggestedFixes;
+      await error.save();
+
+      logger.info("AI explanation generated", {
+        errorId: error._id,
+        hasExplanation: !!aiResult.explanation,
+        fixCount: aiResult.suggestedFixes.length,
+      });
+
+      return res.json({
+        success: true,
+        explanation: aiResult.explanation,
+        suggestedFixes: aiResult.suggestedFixes,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Failed to generate AI explanation",
+    });
+  } catch (error) {
+    logger.error("AI explanation failed", {
+      errorId: req.params.id,
+      message: error.message,
+    });
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
   }
 });
 
