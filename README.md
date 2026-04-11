@@ -1,325 +1,258 @@
-# BugScope - Error Tracking System
+BugScope - Error Tracking System
 
-A simple error tracking system built for learning production-level backend development. This project helps capture runtime errors from web applications, organize them intelligently, and provide insights.
+Overview
+BugScope is an error tracking and monitoring system built with Node.js, Express, MongoDB, and React. It helps development teams catch and fix errors faster with AI-powered explanations and team collaboration features.
 
-## What is BugScope?
+Technology Stack
 
-When you build a web app and something breaks in production, you need to know:
-- What error happened?
-- How many times did it happen?
-- Which environment (dev/production) did it break in?
-- How critical is it?
+Backend:
 
-BugScope answers all these questions automatically. It's like having a monitoring system that never sleeps.
+- Node.js and Express
+- MongoDB Atlas for database
+- JWT for authentication
+- Winston for logging
+- Nodemailer for email
+- Hugging Face API for AI explanations
 
-## The Idea
+Frontend:
 
-I was learning backend development and wanted to build something real and production-grade. Sentry (a popular error tracking tool) costs money, so I decided to build a simplified version that:
-- Captures errors automatically
-- Groups similar errors together (not duplicate entries)
-- Classifies by severity (high/medium/low)
-- Tracks which environment errors come from
-- Logs everything professionally
+- React
+- Axios for API calls
+- Recharts for data visualization
+- Tailwind CSS for styling
 
-## Tech Stack
+Features
 
-### Backend (This Repo)
-- Node.js + Express.js - Server
-- MongoDB - Database
-- Winston - Professional logging
-- express-rate-limit - Security (prevent spam)
+Error Logging and Grouping
+Automatically groups similar errors together to reduce dashboard noise and help teams focus on unique issues.
 
-### Frontend (Coming Next)
-- React / Next.js - User interface
-- Tailwind CSS - Styling
-- Dashboard to visualize errors
+AI-Powered Explanations
+Uses Hugging Face API to automatically explain what went wrong and suggest fixes for each error.
 
-### Design
-- My designer teammate will handle UI/UX
+User Authentication
+Login and registration system with JWT tokens. Tokens are valid for 7 days.
 
-### AI Integration (Coming Soon)
-- Hugging Face API - Explain what errors mean
-- Suggest fixes automatically
-- Natural language explanations
+Email Invitations
+Admin users can invite team members via email. Invitation links expire after 7 days.
 
-## Features Implemented
+Error Priority System
+Set priority levels for errors as Critical, Urgent, High, Medium, or Low to help teams prioritize what to fix first.
 
-**Error Management:**
-- Automatic error capture from frontend
-- Group errors by message + stack + severity + environment
-- Track first & last seen timestamps
-- Count how many times error occurred
+Role-Based Access Control
+Admin users have full system access. Contributor users have limited access for viewing and commenting on errors.
 
-**Severity Levels:**
-- LOW - Not urgent, can fix later
-- MEDIUM - Should fix soon
-- HIGH - Critical, needs immediate attention
+Activity Logging
+Complete audit trail that tracks who made changes, what changes were made, and when they happened.
 
-**Environment Tracking:**
-- Development
-- Staging
-- Production
+Advanced Error Filtering
+Filter errors by multiple criteria at once: severity level, priority, status, and environment.
 
-**Security:**
-- Rate limiting (prevent spam attacks)
-- Input validation
-- CORS protection
-- Environment variables for secrets
+Comments and Error Timeline
+Team members can discuss errors in comments. Each error shows a complete timeline of creation, assignment, status changes, comments, and resolution.
 
-**Logging:**
-- Winston logger saves everything
-- JSON formatted logs
-- Timestamps on every action
-- Separate error-only logs
+Project Structure
 
-## How It Works
+bugscope/
+├── backend/
+│ ├── config/
+│ │ ├── db.js
+│ │ └── logger.js
+│ ├── middleware/
+│ │ ├── auth.js
+│ │ ├── rbac.js
+│ │ └── activityLogger.js
+│ ├── models/
+│ │ ├── Error.js
+│ │ ├── User.js
+│ │ ├── Comment.js
+│ │ ├── Invitation.js
+│ │ └── ActivityLog.js
+│ ├── routes/
+│ │ ├── errorRoutes.js
+│ │ ├── authRoutes.js
+│ │ ├── commentRoutes.js
+│ │ ├── priorityRoutes.js
+│ │ ├── invitationRoutes.js
+│ │ ├── userRoutes.js
+│ │ └── adminRoutes.js
+│ ├── utils/
+│ │ ├── errorGrouping.js
+│ │ ├── aiExplainer.js
+│ │ └── emailSender.js
+│ ├── server.js
+│ ├── package.json
+│ └── .env (not in git)
+│
+├── frontend/
+│ ├── src/
+│ │ ├── components/
+│ │ │ ├── Dashboard.jsx
+│ │ │ ├── ErrorList.jsx
+│ │ │ ├── Charts.jsx
+│ │ │ ├── AdminPanel.jsx
+│ │ │ └── Login.jsx
+│ │ ├── pages/
+│ │ │ ├── ErrorDetailPage.jsx
+│ │ │ ├── DashboardPage.jsx
+│ │ │ └── AdminPage.jsx
+│ │ ├── App.jsx
+│ │ ├── index.js
+│ │ └── styles/
+│ ├── public/
+│ ├── package.json
+│ └── .env (not in git)
+│
+├── .gitignore
+└── README.md
 
-```
-1. Your app breaks (JavaScript error)
-   ↓
-2. SDK captures the error
-   ↓
-3. Sends to BugScope backend
-   ↓
-4. Backend validates the data
-   ↓
-5. Checks if error already exists
-   ↓
-6. If YES → increment count
-   If NO → create new error
-   ↓
-7. Save to MongoDB
-   ↓
-8. Log the action with Winston
-   ↓
-9. Return success to frontend
-```
+API Endpoints
 
-## Getting Started
+Authentication
+POST /auth/register - Create new user account
+POST /auth/login - Login user
+POST /auth/logout - Logout user
 
-### Requirements
-- Node.js (v14+)
-- MongoDB (free account on MongoDB Atlas)
-- npm
+Errors
+POST /api/errors/log - Log a new error
+GET /api/errors - Get all errors with optional filters
+GET /api/errors/:id - Get details of single error
+GET /api/errors/:id/details - Get error with comments and timeline
+POST /api/errors/:id/explain - Get AI explanation and fixes
+PATCH /api/errors/:id/status - Change error status
+PATCH /api/errors/:id/priority - Change error priority
+PATCH /api/errors/:id/assign - Assign error to user
 
-### Installation
+Comments
+POST /api/errors/:id/comments - Add comment to error
+GET /api/errors/:id/comments - Get all comments on error
+DELETE /api/comments/:id - Delete comment
 
-```bash
-# Clone repo
-git clone https://github.com/gkverse/bugscope.git
-cd bugscope
+Users and Admin
+GET /api/users - List all users
+PATCH /api/users/:id/role - Change user role
+DELETE /api/users/:id - Delete user
+GET /api/admin/activity-logs - View activity logs
+GET /api/admin/stats/:projectId - Get error statistics
 
-# Install packages
+Frontend Pages
+
+Login Page
+User login and registration forms with email and password validation.
+
+Dashboard
+Main page showing all errors with real-time updates. Users can filter errors by severity, priority, status, and environment.
+
+Error Detail Page
+Shows complete error information including AI explanation, suggested fixes, comments, and timeline of all changes.
+
+Error List
+Sortable and filterable list of errors. Click any error to see full details.
+
+Charts
+Visualizations showing error distribution by severity, priority status, and environment.
+
+Admin Panel
+Admin-only area for managing users, viewing activity logs, and managing system settings.
+
+Getting Started
+
+Backend Setup
+
+cd backend
 npm install
 
-# Create .env file
-# Add: PORT=5000, MONGO_URI=your_mongodb_url, NODE_ENV=development
+Create .env file with these variables:
+PORT=5000
+MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/bugscope
+JWT_SECRET=your_jwt_secret_key_here
+HUGGING_FACE_API_KEY=hf_your_token_here
+EMAIL_USER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password_here
+FRONTEND_URL=http://localhost:3000
 
-# Start server
+Start the server:
 npm run dev
-```
 
-Server runs on `http://localhost:5000`
+Frontend Setup
 
-## API Endpoints
+cd frontend
+npm install
 
-### Send an Error
-```
-POST /api/errors/log
+Create .env file with:
+REACT_APP_API_URL=http://localhost:5000
 
-Body:
-{
-  "message": "Cannot read property 'name'",
-  "stack": "TypeError at line 10",
-  "projectId": "my-app",
-  "severity": "high",
-  "environment": "production"
-}
+Start the frontend:
+npm start
 
-Response:
-{
-  "success": true,
-  "errorId": "63f5a1b2c3d4e5f6g7h8i9j0",
-  "count": 1
-}
-```
+Frontend will run on http://localhost:3000
 
-### Get All Errors
-```
-GET /api/errors?projectId=my-app&severity=high&environment=production
+Testing
 
-Returns list of errors with pagination
-```
+Backend has 20 tests covering authentication, error logging, comments, assignment, and timeline features. All tests are passing.
 
-### Get Statistics
-```
-GET /api/errors/stats/my-app
+Test Results:
 
-Returns:
-{
-  "bySeverity": {
-    "high": 15,
-    "medium": 32,
-    "low": 48,
-    "total": 95
-  },
-  "byEnvironment": {
-    "production": 60,
-    "staging": 20,
-    "development": 15,
-    "total": 95
-  }
-}
-```
+- Test 1: Get fresh tokens
+- Test 2: Add comment to error
+- Test 3: View comments on error
+- Test 4: Delete own comment
+- Test 5: Try delete others comment
+- Test 6: Get error details with timeline
+- Test 7: Assign error to user
+- Test 8: Complete error lifecycle
 
-## Database Schema
+Default Test Credentials
 
-```javascript
-Error {
-  message: String,          // "Cannot read property..."
-  stack: String,            // Stack trace
-  severity: String,         // "low" | "medium" | "high"
-  environment: String,      // "development" | "staging" | "production"
-  count: Number,            // How many times occurred
-  projectId: String,        // Which app
-  firstSeen: Date,          // When first happened
-  lastSeen: Date,           // When last happened
-  isActive: Boolean,        // Still happening?
-}
-```
+Admin Account:
+Email: admin1@bugscope.com
+Password: Admin@123
+Role: admin
 
-## Why Database Indexes Matter
+Contributor Account:
+Email: newcontrib@bugscope.com
+Password: NewContrib@123
+Role: contributor
 
-When you have 100,000 errors in MongoDB, searching without indexes is slow. So I added:
+Database Setup
 
-1. Single field indexes on: projectId, severity, environment
-2. Composite index: (projectId, message, stack, severity, environment) - helps group errors quickly
-3. Composite index: (projectId, severity, environment, lastSeen) - helps dashboard queries
+BugScope uses MongoDB Atlas for the database. Collections created:
 
-These make queries 100x faster.
+Errors - stores error reports and details
+Users - stores user accounts and roles
+Comments - stores comments on errors
+Invitations - stores email invitations
+ActivityLogs - stores audit trail of all actions
 
-## Security Features
+How It Works
 
-**Rate Limiting:**
-- General: 100 requests per 15 minutes
-- Error endpoint: 30 requests per minute
+1. Developer logs an error using the SDK or API
+2. Error is grouped with similar errors
+3. AI explains the error and suggests fixes
+4. Admin or team member sees error on dashboard
+5. Admin assigns error to a team member
+6. Team member investigates and comments
+7. Team member marks error as resolved
+8. Complete timeline and history is preserved
 
-This prevents someone from spamming thousands of fake errors to crash the database.
+Contributors
 
-**Input Validation:**
-- Check severity is "low", "medium", or "high"
-- Check environment is "development", "staging", "production"
-- Trim whitespace from message/stack
+Garv - Backend development
+Umang - Frontend development
 
-**CORS:**
-- Only allow requests from whitelisted domains
-- Prevents random websites from using your API
+License
 
-## Logging
+MIT License
 
-All actions logged with Winston in JSON format.
+Copyright (c) 2026 BugScope
 
-**combined.log** - everything:
-```
-{"timestamp":"2026-03-22 13:33:53","level":"info","message":"Error logged (new)","projectId":"my-app","severity":"high"}
-```
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-**error.log** - only errors:
-```
-{"timestamp":"2026-03-22 13:35:20","level":"error","message":"Database connection failed","error":"Connection timeout"}
-```
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 
-View logs:
-```bash
-cat logs/combined.log
-cat logs/error.log
-tail -f logs/combined.log  # Real-time monitoring
-```
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-## Testing
+Support
 
-Use Thunder Client (VS Code extension) to test:
+For issues or questions about BugScope, create a GitHub issue in the repository.
 
-1. POST to `/api/errors/log` with error data
-2. GET from `/api/errors?projectId=my-app`
-3. GET from `/api/errors/stats/my-app`
-
-## Project Structure
-
-```
-bugscope/
-├── config/
-│   ├── db.js          # Connect to MongoDB
-│   └── logger.js      # Winston configuration
-├── models/
-│   └── Error.js       # Database schema
-├── routes/
-│   └── errorRoutes.js # API endpoints
-├── logs/              # Log files stored here
-├── .env               # Secrets (not in git)
-├── .gitignore         # What to ignore in git
-├── server.js          # Main server
-└── package.json       # Dependencies
-```
-
-## Next Steps
-
-**Feature 4: Smart Error Grouping**
-- Group "Cannot read property X" errors as one type
-- Instead of: "Cannot read name", "Cannot read age", "Cannot read email"
-- Show them as: "Cannot read property (generic)"
-
-**Feature 5: AI Integration with Hugging Face**
-- Send error to Hugging Face API
-- Get back: "This error means X"
-- Get back: "To fix this, do Y"
-- Show explanations on dashboard
-
-**Feature 8: Frontend Dashboard**
-- React UI to view all errors
-- Charts showing trends
-- Filter by severity, environment
-- See detailed error information
-
-## What I Learned
-
-Building this project taught me:
-- How to design APIs properly
-- Database indexing and optimization
-- Security best practices (rate limiting, validation)
-- Professional logging with structured JSON
-- Multi-environment support
-- Error handling at scale
-- How real production systems work
-
-## Future Ideas
-
-- Email alerts when HIGH severity errors occur
-- Slack integration to notify team
-- Session recording to see what user was doing
-- Error trends (are we getting more errors?)
-- Custom error grouping rules
-- Dark mode on dashboard
-- Mobile app to check errors on the go
-
-## Note
-
-This is a learning project. If you need enterprise error tracking in production, use Sentry or Datadog. This is built to understand how they work under the hood.
-
-## Roadmap
-
-- [x] Feature 2: Error Severity System
-- [x] Feature 3: Environment Support
-- [x] Feature 6: Rate Limiting
-- [x] Feature 7: Winston Logging
-- [ ] Feature 4: Smart Error Grouping
-- [ ] Feature 5: Hugging Face AI Integration
-- [ ] Feature 8: GitHub Setup (this!)
-- [ ] Frontend Dashboard
-- [ ] Deployment
-
-## Author
-
-Built by me while learning backend development.
-
-GitHub: [@gkverse](https://github.com/gkverse)
+Contact the development team with any questions about deployment or usage.
