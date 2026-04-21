@@ -1,4 +1,4 @@
-###BugScope - Error Tracking System
+#BugScope - Error Tracking System
 
 Overview
 BugScope is an error tracking and monitoring system built with Node.js, Express, MongoDB, and React. It helps development teams catch and fix errors faster with AI-powered explanations and team collaboration features.
